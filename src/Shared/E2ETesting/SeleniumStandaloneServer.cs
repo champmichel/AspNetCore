@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -14,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.E2ETesting;
 using Microsoft.Extensions.Internal;
-using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -128,6 +128,10 @@ namespace Microsoft.AspNetCore.E2ETesting
                 throw;
             }
 
+            // Log output for selenium standalone process.
+            // This is for the case where the server fails to launch.
+            var logOutput = new BlockingCollection<string>();
+
             process.OutputDataReceived += LogOutput;
             process.ErrorDataReceived += LogOutput;
 
@@ -137,8 +141,11 @@ namespace Microsoft.AspNetCore.E2ETesting
             // The Selenium sever has to be up for the entirety of the tests and is only shutdown when the application (i.e. the test) exits.
             AppDomain.CurrentDomain.ProcessExit += (sender, args) => ProcessCleanup(process, pidFilePath);
 
+            // Log
             void LogOutput(object sender, DataReceivedEventArgs e)
             {
+                logOutput.TryAdd(e.Data);
+
                 // We avoid logging on the output here because it is unreliable. We can only log in the diagnostics sink.
                 lock (_diagnosticsMessageSink)
                 {
@@ -174,9 +181,11 @@ namespace Microsoft.AspNetCore.E2ETesting
 
             // Make output null so that we stop logging to it.
             output = null;
+            logOutput.CompleteAdding();
             // If we got here, we couldn't launch Selenium or get it to respond. So shut it down.
             ProcessCleanup(process, pidFilePath);
-            throw new Exception("Failed to launch the server");
+            throw new InvalidOperationException(@$"Failed to launch the server:
+{string.Join(Environment.NewLine, logOutput.GetConsumingEnumerable())}");
         }
 
         private static Process StartSentinelProcess(Process process, string sentinelFile, int timeout)
