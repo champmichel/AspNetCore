@@ -188,14 +188,6 @@ ExitCode: {exitCodeString}
 Captured output lines:
 {string.Join(Environment.NewLine, logOutput.GetConsumingEnumerable())}.";
 
-            if (process.HasExited)
-            {
-                var standardOutput = await process.StandardOutput.ReadToEndAsync();
-                message += $"Total output lines:{Environment.NewLine}{standardOutput}";
-                var standardError = await process.StandardError.ReadToEndAsync();
-                message += $"Error lines:{Environment.NewLine}{standardError}";
-            }
-
             // If we got here, we couldn't launch Selenium or get it to respond. So shut it down.
             ProcessCleanup(process, pidFilePath);
             throw new InvalidOperationException(message);
@@ -208,7 +200,7 @@ Captured output lines:
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd",
-                Arguments = $"/c TIMEOUT /T {timeout} /NOBREAK & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
+                Arguments = $"/c TIMEOUT /T {timeout} & echo Timeout completed & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
             };
 
             return Process.Start(psi);
