@@ -182,10 +182,23 @@ namespace Microsoft.AspNetCore.E2ETesting
             // Make output null so that we stop logging to it.
             output = null;
             logOutput.CompleteAdding();
+            var exitCodeString = process.HasExited ? process.ExitCode.ToString() : "Process has not yet exited.";
+            var message = @$"Failed to launch the server.
+ExitCode: {exitCodeString}
+Captured output lines:
+{string.Join(Environment.NewLine, logOutput.GetConsumingEnumerable())}.";
+
+            if (process.HasExited)
+            {
+                var standardOutput = await process.StandardOutput.ReadToEndAsync();
+                message += $"Total output lines:{Environment.NewLine}{standardOutput}";
+                var standardError = await process.StandardError.ReadToEndAsync();
+                message += $"Error lines:{Environment.NewLine}{standardError}";
+            }
+
             // If we got here, we couldn't launch Selenium or get it to respond. So shut it down.
             ProcessCleanup(process, pidFilePath);
-            throw new InvalidOperationException(@$"Failed to launch the server:
-{string.Join(Environment.NewLine, logOutput.GetConsumingEnumerable())}");
+            throw new InvalidOperationException(message);
         }
 
         private static Process StartSentinelProcess(Process process, string sentinelFile, int timeout)
