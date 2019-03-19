@@ -200,7 +200,7 @@ Captured output lines:
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd",
-                Arguments = $"/c TIMEOUT /T {timeout} & echo Timeout completed & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
+                Arguments = $"/c TIMEOUT /T {timeout} >nul & echo Timeout completed & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
             };
 
             return Process.Start(psi);
