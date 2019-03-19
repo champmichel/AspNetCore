@@ -30,7 +30,7 @@ namespace Microsoft.AspNetCore.E2ETesting
         private static IMessageSink _diagnosticsMessageSink;
 
         // 1h 30 min
-        private static int SeleniumProcessTimeout = 90 * 60;
+        private static int SeleniumProcessTimeout = 5400;
 
         public SeleniumStandaloneServer(IMessageSink diagnosticsMessageSink)
         {
@@ -208,7 +208,7 @@ Captured output lines:
             var psi = new ProcessStartInfo
             {
                 FileName = "cmd",
-                Arguments = $"/c TIMEOUT {timeout} & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
+                Arguments = $"/c TIMEOUT /T {timeout} /NOBREAK & if exist \"{sentinelFile}\" (taskkill /T /F /PID {process.Id} 2>&1)"
             };
 
             return Process.Start(psi);
